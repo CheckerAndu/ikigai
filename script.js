@@ -5,9 +5,7 @@ const resultsMessage = document.querySelector("#results-message");
 const editAnswersButton = document.querySelector("#edit-answers");
 const findButton = document.querySelector("#find-button");
 
-// Your public Cloudflare Worker URL — never put the API key here.
-const API_URL =
-  "https://ikigaigeminiapi.andrei-penisoara.workers.dev";
+const API_URL = "https://ikigaigeminiapi.andrei-penisoara.workers.dev";
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -22,107 +20,89 @@ form.addEventListener("submit", async (event) => {
   };
 
   findButton.disabled = true;
-  findButton.textContent = "Exploring your Ikigai…";
+  findButton.textContent = "Exploring your Ikigai...";
   results.hidden = false;
-  resultsMessage.textContent =
-    "Your answers are being analysed. This may take a few seconds.";
+  resultsMessage.textContent = "Analysing your answers...";
   results.scrollIntoView({ behavior: "smooth", block: "start" });
 
   try {
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(answers)
     });
 
     const data = await response.json();
 
     if (!response.ok || data.error) {
-      throw new Error(
-        data.error || "The analysis could not be completed."
-      );
+      throw new Error(data.error || "Analysis failed.");
     }
 
     if (typeof data.result !== "string" || !data.result.trim()) {
-      throw new Error("The AI returned an empty result.");
+      throw new Error("Gemini returned an empty result.");
     }
 
-    // textContent which displays plain text safely
-    
-resultsMessage.replaceChildren();
+    // Keep a copy of the full response for debugging.
+    console.log("Full Gemini response:", data.result);
+    console.log("Response length:", data.result.length);
 
-const lines = data.result.split(/\r?\n/);
-let currentList = null;
+    resultsMessage.replaceChildren();
 
-for (const rawLine of lines) {
-  const line = rawLine.trim();
+    const lines = data.result.split(/\r?\n/);
+    let currentList = null;
 
-  if (!line) {
-    currentList = null;
-    continue;
-  }
+    for (const rawLine of lines) {
+      // Remove common Markdown formatting safely.
+      const line = rawLine.trim()
+        .replace(/^#{1,3}\s+/, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/__(.*?)__/g, "$1")
+        .replace(/_(.*?)_/g, "$1");
 
-  // Remove common Markdown heading markers.
-  const headingMatch = line.match(/^#{1,3}\s+(.+)$/);
+      if (!line) {
+        currentList = null;
+        continue;
+      }
 
-  if (headingMatch) {
-    currentList = null;
-    const heading = document.createElement("h3");
-    heading.textContent = headingMatch[1].replace(/\*+/g, "");
-    resultsMessage.appendChild(heading);
-    continue;
-  }
+      // Numbered and bulleted lists.
+      const listMatch = line.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
 
-  // Support bullet points and numbered lists.
-  const listMatch = line.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
+      if (listMatch) {
+        const numbered = /^\d+[.)]\s+/.test(line);
+        const type = numbered ? "ol" : "ul";
 
-  if (listMatch) {
-    const isNumbered = /^\d+[.)]\s+/.test(line);
-    const listType = isNumbered ? "ol" : "ul";
+        if (!currentList || currentList.tagName.toLowerCase() !== type) {
+          currentList = document.createElement(type);
+          resultsMessage.appendChild(currentList);
+        }
 
-    if (!currentList || currentList.tagName.toLowerCase() !== listType) {
-      currentList = document.createElement(listType);
-      resultsMessage.appendChild(currentList);
+        const item = document.createElement("li");
+        item.textContent = listMatch[1];
+        currentList.appendChild(item);
+        continue;
+      }
+
+      currentList = null;
+
+      // Recognise headings even if Gemini uses bold text instead of #.
+      const isHeading =
+        line.length < 100 &&
+        /^(direction\s*\d*|why it fits|next step|small next step|summary|recommendation|your ikigai|possible direction)/i.test(line);
+
+      const element = document.createElement(isHeading ? "h3" : "p");
+      element.textContent = line;
+      resultsMessage.appendChild(element);
     }
-
-    const item = document.createElement("li");
-    item.textContent = listMatch[1].replace(/\*+/g, "");
-    currentList.appendChild(item);
-    continue;
-  }
-
-  // Treat short Markdown-style titles as headings
-  const cleanedLine = line.replace(/\*+/g, "").trim();
-
-  if (
-    cleanedLine.length < 90 &&
-    /^(direction|next step|why it fits|summary|recommendation|your ikigai)/i.test(cleanedLine)
-  ) {
-    currentList = null;
-    const heading = document.createElement("h3");
-    heading.textContent = cleanedLine;
-    resultsMessage.appendChild(heading);
-    continue;
-  }
-
-  // Ordinary paragraph.
-  currentList = null;
-  const paragraph = document.createElement("p");
-  paragraph.textContent = cleanedLine;
-  resultsMessage.appendChild(paragraph);
-}
 
   } catch (error) {
     console.error("Ikigai request failed:", error);
     resultsMessage.textContent =
-      "Sorry, we couldn't analyse your answers. Please try again. " +
-      "If the problem continues, check the Cloudflare Worker logs.";
+      "We couldn't complete your analysis. Please try again. " +
+      "If the problem continues, check the browser Console and Cloudflare Worker logs.";
   } finally {
     findButton.disabled = false;
-    findButton.innerHTML =
-      'Explore my Ikigai <span aria-hidden="true">↗</span>';
+    findButton.textContent = "Explore my Ikigai ↗";
   }
 });
 
