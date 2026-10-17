@@ -50,17 +50,69 @@ form.addEventListener("submit", async (event) => {
     }
 
     // textContent which displays plain text safely
-    resultsMessage.replaceChildren();
+    
+resultsMessage.replaceChildren();
 
-data.result.split(/\n+/).forEach((line) => {
-  const text = line.trim();
+const lines = data.result.split(/\r?\n/);
+let currentList = null;
 
-  if (!text) return;
+for (const rawLine of lines) {
+  const line = rawLine.trim();
 
+  if (!line) {
+    currentList = null;
+    continue;
+  }
+
+  // Remove common Markdown heading markers.
+  const headingMatch = line.match(/^#{1,3}\s+(.+)$/);
+
+  if (headingMatch) {
+    currentList = null;
+    const heading = document.createElement("h3");
+    heading.textContent = headingMatch[1].replace(/\*+/g, "");
+    resultsMessage.appendChild(heading);
+    continue;
+  }
+
+  // Support bullet points and numbered lists.
+  const listMatch = line.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
+
+  if (listMatch) {
+    const isNumbered = /^\d+[.)]\s+/.test(line);
+    const listType = isNumbered ? "ol" : "ul";
+
+    if (!currentList || currentList.tagName.toLowerCase() !== listType) {
+      currentList = document.createElement(listType);
+      resultsMessage.appendChild(currentList);
+    }
+
+    const item = document.createElement("li");
+    item.textContent = listMatch[1].replace(/\*+/g, "");
+    currentList.appendChild(item);
+    continue;
+  }
+
+  // Treat short Markdown-style titles as headings
+  const cleanedLine = line.replace(/\*+/g, "").trim();
+
+  if (
+    cleanedLine.length < 90 &&
+    /^(direction|next step|why it fits|summary|recommendation|your ikigai)/i.test(cleanedLine)
+  ) {
+    currentList = null;
+    const heading = document.createElement("h3");
+    heading.textContent = cleanedLine;
+    resultsMessage.appendChild(heading);
+    continue;
+  }
+
+  // Ordinary paragraph.
+  currentList = null;
   const paragraph = document.createElement("p");
-  paragraph.textContent = text;
+  paragraph.textContent = cleanedLine;
   resultsMessage.appendChild(paragraph);
-});
+}
 
   } catch (error) {
     console.error("Ikigai request failed:", error);
