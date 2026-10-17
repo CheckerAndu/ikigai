@@ -1,16 +1,18 @@
+
 const form = document.querySelector("#ikigai-form");
 const results = document.querySelector("#results");
 const resultsMessage = document.querySelector("#results-message");
 const editAnswersButton = document.querySelector("#edit-answers");
+const findButton = document.querySelector("#find-button");
 
-form.addEventListener("submit", (event) => {
+// Your public Cloudflare Worker URL — never put the API key here.
+const API_URL =
+  "https://ikigaigeminiapi.andrei-penisoara.workers.dev";
+
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (!form.reportValidity()) return;
-
-  // TODO (your task): collect the four answers into one object.
-  // TODO (later): send that object to a secure server endpoint that calls an AI model.
-  // Never place a private API key in this browser-side file.
 
   const answers = {
     love: form.elements.love.value.trim(),
@@ -19,12 +21,46 @@ form.addEventListener("submit", (event) => {
     world: form.elements.world.value.trim()
   };
 
-  // For now, confirm the form works without pretending that an AI has analysed it.
-  console.log("Ikigai answers ready for analysis:", answers);
-  resultsMessage.textContent =
-    "Your four answers have been collected. AI matching is not connected yet; that's the next development step.";
+  findButton.disabled = true;
+  findButton.textContent = "Exploring your Ikigai…";
   results.hidden = false;
+  resultsMessage.textContent =
+    "Your answers are being analysed. This may take a few seconds.";
   results.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(answers)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(
+        data.error || "The analysis could not be completed."
+      );
+    }
+
+    if (typeof data.result !== "string" || !data.result.trim()) {
+      throw new Error("The AI returned an empty result.");
+    }
+
+    // textContent displays plain text safely; it doesn't execute HTML.
+    resultsMessage.textContent = data.result;
+  } catch (error) {
+    console.error("Ikigai request failed:", error);
+    resultsMessage.textContent =
+      "Sorry, we couldn't analyse your answers. Please try again. " +
+      "If the problem continues, check the Cloudflare Worker logs.";
+  } finally {
+    findButton.disabled = false;
+    findButton.innerHTML =
+      'Explore my Ikigai <span aria-hidden="true">↗</span>';
+  }
 });
 
 editAnswersButton.addEventListener("click", () => {
