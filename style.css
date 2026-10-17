@@ -83,3 +83,113 @@ button span { padding-left: 8px; }
   .form-footer button { width: 100%; }
   .site-footer { flex-direction: column; gap: 4px; }
 }
+
+
+/* Diagram section */
+.diagram-section {
+  margin: 0 auto 60px;
+  text-align: center;
+}
+
+.diagram-section h2 {
+  margin-bottom: 8px;
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  letter-spacing: -0.04em;
+}
+
+.diagram-description {
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+/* The shared space containing all four circles */
+.ikigai-diagram {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+/* Common styling shared by all circles */
+.circle {
+  position: absolute;
+  width: 58%;
+  aspect-ratio: 1 / 1;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+}
+
+/* Each circle gets its own position and color */
+.circle-love {
+  top: 3%;
+  left: 21%;
+  background: rgba(120, 169, 237, 0.55);
+}
+
+.circle-good {
+  top: 22%;
+  left: 2%;
+  background: rgba(195, 166, 230, 0.55);
+}
+
+.circle-world {
+  top: 22%;
+  right: 2%;
+  background: rgba(146, 120, 222, 0.40);
+}
+
+.circle-paid {
+  top: 39%;
+  left: 21%;
+  background: rgba(120, 169, 237, 0.55);
+}
+
+/* Text labels float above the colored circles */
+.diagram-label {
+  position: absolute;
+  z-index: 2;
+  width: 35%;
+  color: white;
+  font-size: clamp(0.55rem, 1.8vw, 0.8rem);
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+}
+
+.diagram-label strong {
+  font-size: 1.25em;
+}
+
+.label-love {
+  top: 13%;
+  left: 32.5%;
+}
+
+.label-good {
+  top: 44%;
+  left: 0;
+}
+
+.label-world {
+  top: 44%;
+  right: 0;
+}
+
+.label-paid {
+  bottom: 11%;
+  left: 32.5%;
+}
+
+/* The center label sits above all four circles */
+.diagram-center {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 5vw, 2.4rem);
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 4px rgba(32, 38, 66, 0.12);
+}
