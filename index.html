@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore your Ikigai by connecting what you love, what you're good at, what you can be paid for, and what the world needs.">
+  <title>Ikigai Finder — Find your direction</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="#" aria-label="Ikigai Finder home">ikigai<span>.</span></a>
+    <span class="header-note">A little clarity, one question at a time.</span>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">YOUR PERSONAL EXPLORATION</p>
+      <h1 id="page-title">Find the things that <em>make you, you.</em></h1>
+      <p class="intro-copy">Ikigai is often described as the meeting point between what you love, what you're good at, what you can be paid for, and what the world needs. Take a moment to explore each part.</p>
+    </section>
+
+    <form id="ikigai-form" class="questionnaire">
+      <div class="form-heading">
+        <div>
+          <p class="eyebrow">FOUR QUESTIONS</p>
+          <h2>Start with yourself</h2>
+        </div>
+        <p class="time-note">There are no wrong answers.</p>
+      </div>
+
+      <div class="question-grid">
+        <label class="question-card love" for="love">
+          <span class="question-number">01 / LOVE</span>
+          <span class="question-title">What do you love to do?</span>
+          <span class="question-hint">What makes you curious, excited, or so engaged that you lose track of time?</span>
+          <textarea id="love" name="love" rows="5" minlength="3" required placeholder="I love learning how things work, designing things, helping people…"></textarea>
+        </label>
+
+        <label class="question-card good" for="good">
+          <span class="question-number">02 / STRENGTHS</span>
+          <span class="question-title">What are you good at?</span>
+          <span class="question-hint">Think about skills, subjects, qualities, and things others ask you for help with.</span>
+          <textarea id="good" name="good" rows="5" minlength="3" required placeholder="I'm good at solving problems, explaining ideas, building things…"></textarea>
+        </label>
+
+        <label class="question-card paid" for="paid">
+          <span class="question-number">03 / WORK</span>
+          <span class="question-title">What could you be paid for?</span>
+          <span class="question-hint">Which skills or interests might help someone, solve a problem, or create value?</span>
+          <textarea id="paid" name="paid" rows="5" minlength="3" required placeholder="I could create websites, tutor students, repair equipment…"></textarea>
+        </label>
+
+        <label class="question-card world" for="world">
+          <span class="question-number">04 / IMPACT</span>
+          <span class="question-title">What does the world need?</span>
+          <span class="question-hint">What problems would you like to help solve? What would you like to improve?</span>
+          <textarea id="world" name="world" rows="5" minlength="3" required placeholder="The world needs clearer education, useful technology, more connection…"></textarea>
+        </label>
+      </div>
+
+      <div class="form-footer">
+        <p>Your answers are a starting point, not a life-long label.</p>
+        <button type="submit" id="find-button">Explore my Ikigai <span aria-hidden="true">↗</span></button>
+      </div>
+    </form>
+
+    <section id="results" class="results" aria-live="polite" aria-labelledby="results-title" hidden>
+      <p class="eyebrow">YOUR NEXT STEP</p>
+      <h2 id="results-title">Your answers are ready</h2>
+      <p id="results-message">The page is set up. The AI analysis still needs to be connected through a secure server endpoint.</p>
+      <button type="button" class="secondary-button" id="edit-answers">Edit my answers</button>
+    </section>
+
+    <footer class="site-footer">
+      <span>Made for thoughtful beginnings.</span>
+      <span>Explore. Connect. Grow.</span>
+    </footer>
+  </main>
+</body>
+</html>
