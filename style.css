@@ -193,3 +193,25 @@ button span { padding-left: 8px; }
   letter-spacing: 0.04em;
   text-shadow: 0 1px 4px rgba(32, 38, 66, 0.12);
 }
+
+
+#results-message {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  max-width: 75ch;
+  overflow-wrap: anywhere;
+}
+
+#results-message p {
+  margin: 0 0 1rem;
+}
+
+#results-message p:last-child {
+  margin-bottom: 0;
+}
+
+#find-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}

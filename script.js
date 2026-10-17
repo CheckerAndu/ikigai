@@ -49,8 +49,19 @@ form.addEventListener("submit", async (event) => {
       throw new Error("The AI returned an empty result.");
     }
 
-    // textContent displays plain text safely; it doesn't execute HTML.
-    resultsMessage.textContent = data.result;
+    // textContent which displays plain text safely
+    resultsMessage.replaceChildren();
+
+data.result.split(/\n+/).forEach((line) => {
+  const text = line.trim();
+
+  if (!text) return;
+
+  const paragraph = document.createElement("p");
+  paragraph.textContent = text;
+  resultsMessage.appendChild(paragraph);
+});
+
   } catch (error) {
     console.error("Ikigai request failed:", error);
     resultsMessage.textContent =
