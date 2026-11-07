@@ -1,32 +1,52 @@
-// Transparent offline matching engine. It compares each answer with the matching Ikigai dimension.
+// Offline matching engine. Scores show overlap with concepts represented in the career database.
 
 const conceptGroups = {
-  "problem solving": ["problem solving", "problem-solving", "solve problems", "troubleshooting", "debugging", "puzzles", "logic"],
-  technology: ["tech", "computers", "computer science", "coding", "programming", "software", "digital tools", "IT"],
-  design: ["designing", "visual design", "graphic design", "product design", "drawing", "architecture", "CAD"],
-  "helping people": ["helping", "supporting", "care", "service", "volunteering", "working with people"],
-  mathematics: ["math", "maths", "numbers", "calculations", "statistics", "algebra"],
-  science: ["scientific", "experiments", "research", "physics", "biology", "chemistry", "laboratory"],
-  nature: ["environment", "animals", "outdoors", "climate", "plants", "wildlife", "conservation"],
-  writing: ["stories", "storytelling", "blogging", "journalism", "writing"],
-  communication: ["speaking", "explaining", "presenting", "teaching", "public speaking", "languages"],
-  art: ["painting", "illustration", "music", "craft", "photography", "creative arts"],
-  aviation: ["aircraft", "airplanes", "planes", "flying", "flight", "piloting"],
-  space: ["astronomy", "spaceflight", "space exploration", "rockets", "satellites", "planetary science"],
-  engineering: ["mechanical", "electrical", "civil", "aerospace", "engineering"],
-  healthcare: ["medicine", "medical", "nursing", "patient care", "wellbeing", "public health"],
-  business: ["entrepreneurship", "management", "finance", "marketing", "sales", "commerce"],
-  leadership: ["leading", "team leadership", "organising", "organizing", "coordination"],
-  environment: ["sustainability", "ecology", "renewable energy", "climate action"],
-  justice: ["law", "legal", "rights", "equality", "advocacy", "justice"],
-  education: ["learning", "education", "tutoring", "instruction", "curriculum"],
-  data: ["data analysis", "analytics", "datasets", "data science", "visualisation", "visualization"],
-  robotics: ["robot", "robots", "automation", "mechatronics"],
+  "problem solving": ["problem-solving", "solve problems", "solving problems", "troubleshooting", "debugging", "puzzles", "logic", "analytical thinking", "critical thinking"],
+  technology: ["tech", "computers", "computer science", "coding", "programming", "software", "digital tools", "IT", "computing"],
+  design: ["designing", "visual design", "graphic design", "product design", "drawing", "architecture", "CAD", "3d modelling", "3d modeling"],
+  "helping people": ["helping", "supporting", "care", "service", "volunteering", "working with people", "supporting others", "making a difference"],
+  mathematics: ["math", "maths", "numbers", "calculations", "statistics", "algebra", "geometry"],
+  science: ["scientific", "experiments", "research", "physics", "biology", "chemistry", "laboratory", "scientific discovery"],
+  nature: ["environment", "animals", "outdoors", "climate", "plants", "wildlife", "conservation", "ecosystems"],
+  writing: ["stories", "storytelling", "blogging", "journalism", "writing", "creative writing", "content creation"],
+  communication: ["speaking", "explaining", "presenting", "teaching", "public speaking", "languages", "conversation"],
+  art: ["painting", "illustration", "music", "craft", "photography", "creative arts", "visual arts"],
+  aviation: ["aircraft", "airplanes", "airplane", "planes", "flying", "flight", "piloting", "aviation"],
+  space: ["astronomy", "spaceflight", "space exploration", "rockets", "satellites", "planetary science", "cosmos"],
+  engineering: ["mechanical", "electrical", "civil", "aerospace", "engineering", "mechanics"],
+  healthcare: ["medicine", "medical", "nursing", "patient care", "wellbeing", "public health", "health care"],
+  business: ["entrepreneurship", "management", "finance", "marketing", "sales", "commerce", "business"],
+  leadership: ["leading", "team leadership", "organising", "organizing", "coordination", "management"],
+  environment: ["sustainability", "ecology", "renewable energy", "climate action", "environmental protection"],
+  justice: ["law", "legal", "rights", "equality", "advocacy", "justice", "human rights"],
+  education: ["learning", "education", "tutoring", "instruction", "curriculum", "teaching"],
+  data: ["data analysis", "analytics", "datasets", "data science", "visualisation", "visualization", "statistics"],
+  robotics: ["robot", "robots", "automation", "mechatronics", "robotics"],
   construction: ["building", "buildings", "construction", "carpentry", "masonry"],
   transport: ["logistics", "shipping", "mobility", "transportation"],
   food: ["cooking", "culinary", "baking", "nutrition", "food science"],
-  psychology: ["mental health", "behaviour", "behavior", "counselling", "counseling", "心理学"],
-  research: ["investigation", "investigating", "scientific inquiry", "analysis"]
+  psychology: ["mental health", "behaviour", "behavior", "counselling", "counseling", "psychology", "emotional wellbeing"],
+  research: ["investigation", "investigating", "scientific inquiry", "analysis", "experimentation"],
+  creativity: ["creative", "imagination", "inventing", "innovation", "original ideas"],
+  teamwork: ["collaboration", "teamwork", "cooperation", "working in a team"],
+  organisation: ["organization", "organising", "organizing", "planning", "coordination"],
+  communication: ["interpersonal skills", "public relations", "explaining ideas"],
+  safety: ["risk management", "reliability", "protection", "safety"],
+  geography: ["geographical", "maps", "mapping", "earth science"],
+  history: ["heritage", "archaeology", "historical research"],
+  electronics: ["circuits", "electrical systems", "embedded systems"],
+  mechanics: ["mechanical systems", "machines", "machinery"],
+  programming: ["software development", "web development", "coding"],
+  physics: ["physical science", "mechanics", "thermodynamics"],
+  biology: ["life sciences", "ecology", "anatomy"],
+  chemistry: ["chemical science", "materials science"],
+  languages: ["translation", "linguistics", "foreign languages"],
+  finance: ["accounting", "investment", "banking", "economics"],
+  policy: ["public policy", "government", "public administration"],
+  media: ["film", "video", "broadcasting", "content"],
+  agriculture: ["farming", "horticulture", "crops", "livestock"],
+  sport: ["sports", "athletics", "fitness", "coaching"],
+  travel: ["tourism", "travelling", "traveling", "exploring places"]
 };
 
 const stopWords = new Set([
@@ -34,7 +54,7 @@ const stopWords = new Set([
   "good", "have", "into", "just", "like", "love", "make", "more", "much", "need",
   "our", "people", "really", "that", "the", "their", "them", "there", "these",
   "they", "this", "those", "very", "want", "what", "when", "which", "with", "would",
-  "you", "your", "able", "things", "thing", "work", "working"
+  "you", "your", "able", "things", "thing", "work", "working", "interested", "enjoy"
 ]);
 
 function normaliseText(value) {
@@ -57,9 +77,7 @@ function singularise(word) {
 function buildAliasIndex() {
   const index = new Map();
   for (const [concept, aliases] of Object.entries(conceptGroups)) {
-    for (const alias of [concept, ...aliases]) {
-      index.set(normaliseText(alias), concept);
-    }
+    for (const alias of [concept, ...aliases]) index.set(normaliseText(alias), concept);
   }
   return index;
 }
@@ -74,7 +92,7 @@ function extractConcepts(value) {
   const found = new Set();
   let remaining = " " + text + " ";
 
-  // Match longer known phrases first so "data analysis" stays one concept.
+  // Recognise longer phrases before individual words.
   for (const [phrase, concept] of aliasPhrases) {
     const paddedPhrase = " " + phrase + " ";
     if (remaining.includes(paddedPhrase)) {
@@ -91,22 +109,55 @@ function extractConcepts(value) {
   return [...found];
 }
 
-function conceptWeight(concept) {
-  // Broad terms carry less information than specific skills or interests.
-  const broad = new Set(["technology", "science", "design", "business", "data", "research", "communication"]);
-  return broad.has(concept) ? 0.65 : 1;
+function extractCareerConcepts(tags) {
+  const concepts = new Set();
+  const cleanTags = (tags || []).map(tag => String(tag).replace(/;/g, " "));
+
+  cleanTags.forEach(tag => extractConcepts(tag).forEach(concept => concepts.add(concept)));
+
+  // Some imported profiles split common phrases into neighbouring tags, e.g. "problem", "solving".
+  for (let index = 0; index < cleanTags.length - 1; index++) {
+    const pair = cleanTags[index] + " " + cleanTags[index + 1];
+    extractConcepts(pair).forEach(concept => {
+      if (aliasIndex.has(normaliseText(pair))) concepts.add(concept);
+    });
+  }
+  return concepts;
 }
 
-function scoreDimension(userText, careerTags) {
-  const userConcepts = extractConcepts(userText);
-  const careerConcepts = new Set((careerTags || []).flatMap(tag => extractConcepts(tag)));
-  if (!userConcepts.length) return { score: 0, matched: [], total: 0 };
+const dimensionVocabulary = Object.fromEntries(
+  ["love", "good", "paid", "world"].map(dimension => [
+    dimension,
+    new Set(careerDatabase.flatMap(career => [...extractCareerConcepts(career[dimension])]))
+  ])
+);
 
-  const matched = userConcepts.filter(concept => careerConcepts.has(concept));
-  const possibleWeight = userConcepts.reduce((sum, concept) => sum + conceptWeight(concept), 0);
+function conceptWeight(concept) {
+  const broad = new Set(["technology", "science", "design", "business", "data", "research", "communication", "creativity"]);
+  return broad.has(concept) ? 0.7 : 1;
+}
+
+function scoreDimension(userText, careerTags, dimension) {
+  const allUserConcepts = extractConcepts(userText);
+  const vocabulary = dimensionVocabulary[dimension];
+  // Unknown words are not treated as mismatches: the database cannot fairly score concepts it does not contain.
+  const recognised = allUserConcepts.filter(concept => vocabulary.has(concept));
+  const careerConcepts = extractCareerConcepts(careerTags);
+  if (!recognised.length) {
+    return { score: 0, matched: [], recognised: 0, unrecognised: allUserConcepts.length };
+  }
+
+  const matched = recognised.filter(concept => careerConcepts.has(concept));
+  const possibleWeight = recognised.reduce((sum, concept) => sum + conceptWeight(concept), 0);
   const matchedWeight = matched.reduce((sum, concept) => sum + conceptWeight(concept), 0);
   const score = possibleWeight ? Math.round((matchedWeight / possibleWeight) * 100) : 0;
-  return { score, matched, total: userConcepts.length };
+
+  return {
+    score,
+    matched,
+    recognised: recognised.length,
+    unrecognised: allUserConcepts.length - recognised.length
+  };
 }
 
 function scoreCareer(career, answers) {
@@ -117,13 +168,16 @@ function scoreCareer(career, answers) {
   let weightTotal = 0;
 
   for (const dimension of dimensions) {
-    const result = scoreDimension(answers[dimension] || "", career[dimension]);
+    const result = scoreDimension(answers[dimension] || "", career[dimension], dimension);
     breakdown[dimension] = result;
-    weightedTotal += result.score * weights[dimension];
-    weightTotal += weights[dimension];
+    // An unanswered or unrecognised dimension is omitted rather than counted as zero.
+    if (result.recognised > 0) {
+      weightedTotal += result.score * weights[dimension];
+      weightTotal += weights[dimension];
+    }
   }
 
-  const score = Math.round(weightedTotal / weightTotal);
+  const score = weightTotal ? Math.round(weightedTotal / weightTotal) : 0;
   const matchedConcepts = [...new Set(dimensions.flatMap(dimension => breakdown[dimension].matched))];
   const dimensionsMatched = dimensions.filter(dimension => breakdown[dimension].matched.length > 0).length;
   return { ...career, score, breakdown, matchedConcepts, dimensionsMatched };
