@@ -44,7 +44,7 @@ form.addEventListener("submit", (event) => {
 
       const score = document.createElement("div");
       score.className = "match-score";
-      score.textContent = `${career.score}% profile overlap`;
+      score.textContent = `${career.score}% recognised-theme match`;
 
       const description = document.createElement("p");
       description.textContent = career.description;
