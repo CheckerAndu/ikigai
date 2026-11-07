@@ -1,15 +1,11 @@
-
 const form = document.querySelector("#ikigai-form");
 const results = document.querySelector("#results");
 const resultsMessage = document.querySelector("#results-message");
 const editAnswersButton = document.querySelector("#edit-answers");
 const findButton = document.querySelector("#find-button");
 
-const API_URL = "https://ikigaigeminiapi.andrei-penisoara.workers.dev";
-
-form.addEventListener("submit", async (event) => {
+form.addEventListener("submit", (event) => {
   event.preventDefault();
-
   if (!form.reportValidity()) return;
 
   const answers = {
@@ -20,90 +16,69 @@ form.addEventListener("submit", async (event) => {
   };
 
   findButton.disabled = true;
-  findButton.textContent = "Exploring your Ikigai...";
-  results.hidden = false;
-  resultsMessage.textContent = "Analysing your answers...";
-  results.scrollIntoView({ behavior: "smooth", block: "start" });
+  findButton.textContent = "Finding your matches...";
+  resultsMessage.replaceChildren();
 
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(answers)
-    });
+  // All matching happens locally; no API, account or network request is used.
+  const matches = findIkigaiMatches(answers, 5);
 
-    const data = await response.json();
+  if (!matches.length || matches.every(match => match.score === 0)) {
+    const message = document.createElement("p");
+    message.textContent = "We couldn't find strong matches yet. Try adding more specific interests, skills or causes to your answers.";
+    resultsMessage.appendChild(message);
+  } else {
+    matches.forEach((career, index) => {
+      const card = document.createElement("article");
+      card.className = "career-card";
 
-    if (!response.ok || data.error) {
-      throw new Error(data.error || "Analysis failed.");
-    }
+      const rank = document.createElement("span");
+      rank.className = "career-rank";
+      rank.textContent = `MATCH ${index + 1}`;
 
-    if (typeof data.result !== "string" || !data.result.trim()) {
-      throw new Error("Gemini returned an empty result.");
-    }
+      const title = document.createElement("h3");
+      title.textContent = career.title;
 
-    // Keep a copy of the full response for debugging.
-    console.log("Full Gemini response:", data.result);
-    console.log("Response length:", data.result.length);
+      const category = document.createElement("p");
+      category.className = "career-category";
+      category.textContent = career.category;
 
-    resultsMessage.replaceChildren();
+      const score = document.createElement("div");
+      score.className = "match-score";
+      score.textContent = `${career.score}% profile overlap`;
 
-    const lines = data.result.split(/\r?\n/);
-    let currentList = null;
+      const description = document.createElement("p");
+      description.textContent = career.description;
 
-    for (const rawLine of lines) {
-      // Remove common Markdown formatting safely.
-      const line = rawLine.trim()
-        .replace(/^#{1,3}\s+/, "")
-        .replace(/\*\*(.*?)\*\*/g, "$1")
-        .replace(/\*(.*?)\*/g, "$1")
-        .replace(/__(.*?)__/g, "$1")
-        .replace(/_(.*?)_/g, "$1");
+      const why = document.createElement("p");
+      why.className = "match-reason";
+      const matched = career.matchedConcepts.slice(0, 5);
+      why.textContent = matched.length
+        ? `Related themes in your answers: ${matched.join(", ")}.`
+        : "This is an exploratory suggestion based on the wider profile.";
 
-      if (!line) {
-        currentList = null;
-        continue;
-      }
-
-      // Numbered and bulleted lists.
-      const listMatch = line.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
-
-      if (listMatch) {
-        const numbered = /^\d+[.)]\s+/.test(line);
-        const type = numbered ? "ol" : "ul";
-
-        if (!currentList || currentList.tagName.toLowerCase() !== type) {
-          currentList = document.createElement(type);
-          resultsMessage.appendChild(currentList);
-        }
-
+      const activitiesTitle = document.createElement("h4");
+      activitiesTitle.textContent = "Try exploring";
+      const activities = document.createElement("ul");
+      career.activities.forEach(text => {
         const item = document.createElement("li");
-        item.textContent = listMatch[1];
-        currentList.appendChild(item);
-        continue;
-      }
+        item.textContent = text;
+        activities.appendChild(item);
+      });
 
-      currentList = null;
+      const skillsTitle = document.createElement("h4");
+      skillsTitle.textContent = "Skills to develop";
+      const skills = document.createElement("p");
+      skills.textContent = career.skillsToDevelop.join(" · ");
 
-      // Recognise headings even if Gemini uses bold text instead of #.
-      const isHeading =
-        line.length < 100 &&
-        /^(direction\s*\d*|why it fits|next step|small next step|summary|recommendation|your ikigai|possible direction)/i.test(line);
-
-      const element = document.createElement(isHeading ? "h3" : "p");
-      element.textContent = line;
-      resultsMessage.appendChild(element);
-    }
-
-  } catch (error) {
-    console.error("Ikigai request failed:", error);
-    resultsMessage.textContent =
-      "We couldn't complete your analysis. Please try again. " +
-      "If the problem continues, check the browser Console and Cloudflare Worker logs.";
-  } finally {
-    findButton.disabled = false;
-    findButton.textContent = "Explore my Ikigai ↗";
+      card.append(rank, title, category, score, description, why, activitiesTitle, activities, skillsTitle, skills);
+      resultsMessage.appendChild(card);
+    });
   }
+
+  results.hidden = false;
+  results.scrollIntoView({behavior: "smooth", block: "start"});
+  findButton.disabled = false;
+  findButton.innerHTML = 'Explore my Ikigai <span aria-hidden="true">↗</span>';
 });
 
 editAnswersButton.addEventListener("click", () => {
