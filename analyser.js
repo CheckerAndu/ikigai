@@ -72,15 +72,14 @@ function extractConcepts(value) {
   if (!text) return [];
 
   const found = new Set();
-  let remaining = text;
+  let remaining = " " + text + " ";
 
-  // Match longer known phrases first so "data analysis" is not reduced to unrelated single words.
+  // Match longer known phrases first so "data analysis" stays one concept.
   for (const [phrase, concept] of aliasPhrases) {
-    const escaped = phrase.replace(/[.*+?^\u007b}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp("(^| )" + escaped + "(?= |$)", "g");
-    if (pattern.test(remaining)) {
+    const paddedPhrase = " " + phrase + " ";
+    if (remaining.includes(paddedPhrase)) {
       found.add(concept);
-      remaining = remaining.replace(pattern, " ");
+      remaining = remaining.split(paddedPhrase).join(" ");
     }
   }
 
