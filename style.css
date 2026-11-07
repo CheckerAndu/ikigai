@@ -231,3 +231,23 @@ button span { padding-left: 8px; }
   margin-bottom: 0.5rem;
 }
 
+
+
+/* Offline recommendation results */
+.results-intro { margin: 10px 0 24px; color: var(--muted); }
+.results-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
+.career-card { min-width: 0; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+.career-rank { color: var(--blue); font-size: .7rem; font-weight: 800; letter-spacing: .14em; }
+.career-card h3 { margin: 8px 0 2px; font-size: 1.35rem; letter-spacing: -.035em; }
+.career-category { margin: 0 0 12px; color: var(--muted); font-size: .85rem; }
+.match-score { display: inline-block; margin-bottom: 12px; padding: 6px 10px; border-radius: 999px; background: #eef1fb; color: var(--ink); font-size: .8rem; font-weight: 750; }
+.career-card > p { color: var(--muted); }
+.career-card .match-reason { padding: 12px; border-left: 3px solid var(--purple); background: #f8f6fc; color: var(--ink); font-size: .9rem; }
+.career-card h4 { margin: 18px 0 6px; font-size: .92rem; }
+.career-card ul { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .9rem; }
+.career-card li { margin: 5px 0; }
+.career-card h4 + p { margin-bottom: 0; font-size: .9rem; }
+button:disabled { cursor: wait; opacity: .65; transform: none; }
+@media (max-width: 680px) {
+  .results-grid { grid-template-columns: 1fr; }
+}
