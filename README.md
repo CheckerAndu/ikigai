@@ -12,17 +12,12 @@ Open `index.html` in a browser. No build tools are required for the current fron
 
 ## Current status
 
-The first page and form validation are in place. The AI analysis is not connected yet.
-
-## My next steps
-
-1. Editing parts of the README.md and index.html
-2. Finding an API (AI) for analysing results
-3. Testing main function
-4. Adding side functions
+The first page and form validation are in place. All systems are online.
 
 ## Project structure
 
 - `index.html` — page structure and form
 - `style.css` — layout, colors, responsive design
-- `script.js` — form behavior (integrating AI soon)
+- `careers.js` — Database
+- `analyser.js` — Matching system
+- `script.js` — Ikigai recommendations by default
