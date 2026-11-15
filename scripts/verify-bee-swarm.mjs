@@ -183,7 +183,41 @@ try {
     return root._ikigaiDiagramTest.isSwarming();
   });
   record("click in circles region starts swarm", clickStarted === true);
-  await page.waitForTimeout(4200);
+  // Second-trigger settle must keep living motion (no wall-clock phase bleed).
+  await page.waitForTimeout(2200);
+  const settle2A = await page.evaluate(() =>
+    document.querySelector(".ikigai-diagram")._ikigaiDiagramTest.getSwarmSample()
+  );
+  await page.waitForTimeout(180);
+  const settle2B = await page.evaluate(() => {
+    const root = document.querySelector(".ikigai-diagram");
+    return {
+      swarming: root._ikigaiDiagramTest.isSwarming(),
+      sample: root._ikigaiDiagramTest.getSwarmSample()
+    };
+  });
+  const settle2Delta = Math.max(
+    ...settle2A.map((s, i) => Math.hypot(s.x - settle2B.sample[i].x, s.y - settle2B.sample[i].y))
+  );
+  record(
+    "second-trigger settle keeps living bee motion",
+    settle2B.swarming && settle2Delta > 0.35,
+    `delta=${settle2Delta.toFixed(3)} swarming=${settle2B.swarming}`
+  );
+  await page.waitForTimeout(2200);
+  const afterSecond = await page.evaluate(() => {
+    const api = document.querySelector(".ikigai-diagram")._ikigaiDiagramTest;
+    const sample = api.getSwarmSample();
+    return {
+      swarming: api.isSwarming(),
+      maxAbs: Math.max(...sample.map((s) => Math.max(Math.abs(s.x), Math.abs(s.y))))
+    };
+  });
+  record(
+    "second-trigger settles to rest",
+    !afterSecond.swarming && afterSecond.maxAbs < 0.5,
+    JSON.stringify(afterSecond)
+  );
 
   await page.screenshot({
     path: path.join(outDir, "swarm_settled_after.png"),

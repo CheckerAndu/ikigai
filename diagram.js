@@ -40,19 +40,21 @@
   const SHAKE_START_DELAY_MS = 2200;
 
   /**
-   * Click bee-swarm: scatter → overlapping wander → homing bee flight (~4s).
-   * Roughly ~2s of free flight, then ~2s still flying like bees while
-   * fluently seeking original rest positions (not a frozen glide).
-   * Offsets stay in viewBox units so bees stay inside the circles region.
+   * Click bee-swarm (~4s): free Lissajous flight → continuous homing bee settle.
+   * Oscillators use swarm-local elapsed ms (not wall-clock) so re-triggers match.
+   * Settle captures the live pose (no double-sampled wiggle) and seeks home with
+   * a mid-phase buzz gate (0 at boundaries → seamless handoff + soft landing).
    * Skipped entirely when prefers-reduced-motion is set.
    */
   const SWARM_MS = 4000;
   const SWARM_SCATTER_END = 0.12;
-  /** Settle occupies the second half — slow homing bee flight. */
+  /** Settle occupies the second half — directed seek home while still buzzing. */
   const SWARM_SETTLE_START = 0.5;
   /** Peak wander amplitude (viewBox units) — playful, still inside the diagram. */
   const SWARM_AMP = 14;
   const SWARM_RZ_DEG = 7;
+  /** Peak lateral buzz during settle as a fraction of the homeward path length. */
+  const SWARM_SETTLE_BUZZ = 0.34;
 
   const state = circles.map((el) => ({
     el,
@@ -196,17 +198,20 @@
     return 1;
   }
 
-  function sampleSwarmFlight(itemIndex, now, envelope) {
+  /** @param {number} elapsedMs Swarm-local time (now - swarmStartedAt), never wall-clock. */
+  function sampleSwarmFlight(itemIndex, elapsedMs, envelope) {
     const p = swarmParams[itemIndex];
     if (!p || envelope <= 0) return { x: 0, y: 0, rz: 0 };
     // Overlapping Lissajous-ish wander — organic “bee” crossings inside the region.
     const x =
-      (Math.sin(now * p.fx + p.px) * p.ax + Math.sin(now * p.fx2 + p.px2) * p.ax2) *
+      (Math.sin(elapsedMs * p.fx + p.px) * p.ax +
+        Math.sin(elapsedMs * p.fx2 + p.px2) * p.ax2) *
       envelope;
     const y =
-      (Math.cos(now * p.fy + p.py) * p.ay + Math.sin(now * p.fy2 + p.py2) * p.ay2) *
+      (Math.cos(elapsedMs * p.fy + p.py) * p.ay +
+        Math.sin(elapsedMs * p.fy2 + p.py2) * p.ay2) *
       envelope;
-    const rz = Math.sin(now * p.fr + p.pr) * SWARM_RZ_DEG * envelope;
+    const rz = Math.sin(elapsedMs * p.fr + p.pr) * SWARM_RZ_DEG * envelope;
     return {
       x: clamp(x, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
       y: clamp(y, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
@@ -215,43 +220,42 @@
   }
 
   /**
-   * Homing bee flight: orbit center seeks rest, while a strong living wander
-   * keeps the path bee-like (not a frozen slide along a straight line).
+   * Homing bee flight: ease the captured live pose home while a lateral buzz
+   * (gated 0→1→0) keeps the path alive mid-settle without breaking continuity.
    */
-  function sampleSwarmSettle(itemIndex, now, settleT) {
+  function sampleSwarmSettle(itemIndex, elapsedMs, settleT) {
     const from = swarmSettleFrom && swarmSettleFrom[itemIndex];
     const p = swarmParams && swarmParams[itemIndex];
     if (!from || !p) return { x: 0, y: 0, rz: 0 };
 
-    // Fluent home pull on the seek target (where the bee is trying to go).
-    const homePull = easeInOutCubic(settleT);
-    const centerX = from.x * (1 - homePull);
-    const centerY = from.y * (1 - homePull);
-    const centerRz = from.rz * (1 - homePull);
-    const remainDist = Math.hypot(centerX, centerY);
+    // Soft arrive toward rest (in-out keeps early meander, late soft land).
+    const remain = 1 - easeInOutCubic(settleT);
+    const centerX = from.x * remain;
+    const centerY = from.y * remain;
+    const centerRz = from.rz * remain;
 
-    // Keep wingbeat lively — only gently lazy near landing.
-    const slow = 0.7 + 0.3 * (1 - settleT);
-    // Wiggle scales with remaining distance, with a visible floor until late settle.
-    const wiggle =
-      Math.max(remainDist * 0.62, SWARM_AMP * 0.28 * (1 - settleT)) *
-      Math.pow(1 - settleT, 0.25);
+    // 0 at settle start/end → no pop at handoff; peak buzz mid-homing.
+    const buzzGate = Math.sin(Math.PI * settleT);
+    const pathLen = Math.hypot(from.x, from.y);
+    const wiggle = pathLen * SWARM_SETTLE_BUZZ * buzzGate;
+    // Slightly lazier oscillators as they near the hive.
+    const slow = 0.72 + 0.28 * remain;
 
     const bx =
-      (Math.sin(now * p.fx * slow + p.px) * (p.ax / SWARM_AMP) +
-        Math.sin(now * p.fx2 * slow + p.px2) * (p.ax2 / SWARM_AMP)) *
+      (Math.sin(elapsedMs * p.fx * slow + p.px) * (p.ax / SWARM_AMP) +
+        Math.sin(elapsedMs * p.fx2 * slow + p.px2) * (p.ax2 / SWARM_AMP)) *
       wiggle;
     const by =
-      (Math.cos(now * p.fy * slow + p.py) * (p.ay / SWARM_AMP) +
-        Math.sin(now * p.fy2 * slow + p.py2) * (p.ay2 / SWARM_AMP)) *
+      (Math.cos(elapsedMs * p.fy * slow + p.py) * (p.ay / SWARM_AMP) +
+        Math.sin(elapsedMs * p.fy2 * slow + p.py2) * (p.ay2 / SWARM_AMP)) *
       wiggle;
     const brz =
-      Math.sin(now * p.fr * slow + p.pr) * SWARM_RZ_DEG * (0.35 + 0.65 * (1 - settleT));
+      Math.sin(elapsedMs * p.fr * slow + p.pr) * SWARM_RZ_DEG * 0.55 * buzzGate;
 
     return {
-      x: clamp(centerX + bx, -SWARM_AMP * 1.35, SWARM_AMP * 1.35),
-      y: clamp(centerY + by, -SWARM_AMP * 1.35, SWARM_AMP * 1.35),
-      rz: centerRz * 0.25 + brz
+      x: clamp(centerX + bx, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
+      y: clamp(centerY + by, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
+      rz: centerRz * 0.5 + brz
     };
   }
 
@@ -259,8 +263,14 @@
     // Respect prefers-reduced-motion: skip flight (CSS also freezes transforms).
     if (reduceMotion.matches) return false;
 
+    // Fresh params + cleared settle snapshot every click (no cross-run reuse).
     swarmParams = buildSwarmParams();
     swarmSettleFrom = null;
+    for (const item of state) {
+      item.x = 0;
+      item.y = 0;
+      item.swarmRz = 0;
+    }
     pauseIdleShakes();
     swarming = true;
     swarmStartedAt = performance.now();
@@ -280,6 +290,8 @@
     swarmSettleFrom = null;
     diagram.classList.remove("is-swarming");
     for (const item of state) {
+      item.x = 0;
+      item.y = 0;
       item.swarmRz = 0;
       item.tx = 0;
       item.ty = 0;
@@ -441,7 +453,8 @@
     let moving = false;
 
     if (swarming && swarmParams) {
-      const progress = (now - swarmStartedAt) / SWARM_MS;
+      const elapsedMs = now - swarmStartedAt;
+      const progress = elapsedMs / SWARM_MS;
       if (progress >= 1) {
         for (const item of state) {
           item.x = 0;
@@ -467,17 +480,19 @@
 
       let sampleFn;
       if (progress >= SWARM_SETTLE_START) {
-        // First settle frame: remember where each bee is, then fly home from there.
+        // Capture the live rendered pose (not a re-sample) so settle starts seamlessly.
         if (!swarmSettleFrom) {
-          swarmSettleFrom = state.map((_, index) =>
-            sampleSwarmFlight(index, now, 1)
-          );
+          swarmSettleFrom = state.map((item) => ({
+            x: item.x,
+            y: item.y,
+            rz: item.swarmRz
+          }));
         }
         const settleT = (progress - SWARM_SETTLE_START) / (1 - SWARM_SETTLE_START);
-        sampleFn = (index) => sampleSwarmSettle(index, now, settleT);
+        sampleFn = (index) => sampleSwarmSettle(index, elapsedMs, settleT);
       } else {
         const envelope = swarmEnvelope(progress);
-        sampleFn = (index) => sampleSwarmFlight(index, now, envelope);
+        sampleFn = (index) => sampleSwarmFlight(index, elapsedMs, envelope);
       }
 
       state.forEach((item, index) => {
