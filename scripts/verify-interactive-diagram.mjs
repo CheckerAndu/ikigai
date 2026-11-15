@@ -62,7 +62,8 @@ try {
   const motionMode = await diagram.getAttribute("data-diagram-motion");
   record(
     "3d tilt + bell-shake motion mode",
-    motionMode === "3d-tilt-bell-shake",
+    motionMode === "3d-tilt-bell-shake" ||
+      motionMode === "3d-tilt-bell-shake-bee-swarm",
     `mode=${motionMode}`
   );
 

@@ -376,6 +376,15 @@ body:has(#monitoring-consent:not([hidden])) {
   filter: brightness(1.04);
 }
 
+/* Bee-swarm click flight — slight lift, no layout change */
+.ikigai-diagram.is-swarming {
+  cursor: pointer;
+}
+
+.diagram-circle.is-swarming {
+  filter: brightness(1.05) saturate(1.04);
+}
+
 /* Soften siblings gently — keep enough fill so labels stay readable */
 .ikigai-diagram:has(.diagram-circle:hover, .diagram-circle:focus-visible, .diagram-circle.is-active)
   .diagram-circle:not(:hover):not(:focus-visible):not(.is-active) {
