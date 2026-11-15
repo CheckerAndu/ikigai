@@ -40,21 +40,19 @@
   const SHAKE_START_DELAY_MS = 2200;
 
   /**
-   * Click bee-swarm (~4s): free Lissajous flight → continuous homing bee settle.
+   * Click bee-swarm (~4s): free Lissajous flight → same agitation fading home.
    * Oscillators use swarm-local elapsed ms (not wall-clock) so re-triggers match.
-   * Settle captures the live pose (no double-sampled wiggle) and seeks home with
-   * a mid-phase buzz gate (0 at boundaries → seamless handoff + soft landing).
+   * Phase 2 keeps the identical flight oscillators; only the envelope eases
+   * 1 → 0 (ease-in), so agitation matches phase 1 at handoff then winds down.
    * Skipped entirely when prefers-reduced-motion is set.
    */
   const SWARM_MS = 4000;
   const SWARM_SCATTER_END = 0.12;
-  /** Settle occupies the second half — directed seek home while still buzzing. */
+  /** Settle occupies the second half — same bee motion, fading amplitude. */
   const SWARM_SETTLE_START = 0.5;
   /** Peak wander amplitude (viewBox units) — playful, still inside the diagram. */
   const SWARM_AMP = 14;
   const SWARM_RZ_DEG = 7;
-  /** Peak lateral buzz during settle as a fraction of the homeward path length. */
-  const SWARM_SETTLE_BUZZ = 0.34;
 
   const state = circles.map((el) => ({
     el,
@@ -89,9 +87,6 @@
   let swarmStartedAt = 0;
   /** @type {null | Array<{fx:number,fy:number,fx2:number,fy2:number,fr:number,px:number,py:number,px2:number,py2:number,pr:number,ax:number,ay:number,ax2:number,ay2:number}>} */
   let swarmParams = null;
-  /** Snapshot of each circle’s offset when settle begins — eased home from here. */
-  /** @type {null | Array<{x:number,y:number,rz:number}>} */
-  let swarmSettleFrom = null;
 
   function setInteracting(active) {
     diagram.classList.toggle("is-interacting", Boolean(active));
@@ -143,10 +138,10 @@
     return 1 - Math.pow(1 - p, 3);
   }
 
-  /** Balanced ease for a long, unhurried settle home. */
-  function easeInOutCubic(t) {
+  /** Slow start — keeps phase-2 agitation high early, then winds down. */
+  function easeInCubic(t) {
     const p = clamp(t, 0, 1);
-    return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    return p * p * p;
   }
 
   function randRange(min, max) {
@@ -194,7 +189,7 @@
     if (progress < SWARM_SCATTER_END) {
       return easeOutCubic(progress / SWARM_SCATTER_END);
     }
-    // Free-flight + settle both keep full envelope; settle homes via seek, not amp kill.
+    // Free-flight holds full agitation; settle fades it via swarmSettleAgitation().
     return 1;
   }
 
@@ -219,53 +214,17 @@
     };
   }
 
-  /**
-   * Homing bee flight: ease the captured live pose home while a lateral buzz
-   * (gated 0→1→0) keeps the path alive mid-settle without breaking continuity.
-   */
-  function sampleSwarmSettle(itemIndex, elapsedMs, settleT) {
-    const from = swarmSettleFrom && swarmSettleFrom[itemIndex];
-    const p = swarmParams && swarmParams[itemIndex];
-    if (!from || !p) return { x: 0, y: 0, rz: 0 };
-
-    // Soft arrive toward rest (in-out keeps early meander, late soft land).
-    const remain = 1 - easeInOutCubic(settleT);
-    const centerX = from.x * remain;
-    const centerY = from.y * remain;
-    const centerRz = from.rz * remain;
-
-    // 0 at settle start/end → no pop at handoff; peak buzz mid-homing.
-    const buzzGate = Math.sin(Math.PI * settleT);
-    const pathLen = Math.hypot(from.x, from.y);
-    const wiggle = pathLen * SWARM_SETTLE_BUZZ * buzzGate;
-    // Slightly lazier oscillators as they near the hive.
-    const slow = 0.72 + 0.28 * remain;
-
-    const bx =
-      (Math.sin(elapsedMs * p.fx * slow + p.px) * (p.ax / SWARM_AMP) +
-        Math.sin(elapsedMs * p.fx2 * slow + p.px2) * (p.ax2 / SWARM_AMP)) *
-      wiggle;
-    const by =
-      (Math.cos(elapsedMs * p.fy * slow + p.py) * (p.ay / SWARM_AMP) +
-        Math.sin(elapsedMs * p.fy2 * slow + p.py2) * (p.ay2 / SWARM_AMP)) *
-      wiggle;
-    const brz =
-      Math.sin(elapsedMs * p.fr * slow + p.pr) * SWARM_RZ_DEG * 0.55 * buzzGate;
-
-    return {
-      x: clamp(centerX + bx, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
-      y: clamp(centerY + by, -SWARM_AMP * 1.25, SWARM_AMP * 1.25),
-      rz: centerRz * 0.5 + brz
-    };
+  /** Phase-2 envelope: 1 at handoff (same agitation), eases down to 0 at rest. */
+  function swarmSettleAgitation(settleT) {
+    return 1 - easeInCubic(settleT);
   }
 
   function startSwarm() {
     // Respect prefers-reduced-motion: skip flight (CSS also freezes transforms).
     if (reduceMotion.matches) return false;
 
-    // Fresh params + cleared settle snapshot every click (no cross-run reuse).
+    // Fresh params every click (no cross-run reuse); local elapsed resets below.
     swarmParams = buildSwarmParams();
-    swarmSettleFrom = null;
     for (const item of state) {
       item.x = 0;
       item.y = 0;
@@ -287,7 +246,6 @@
   function endSwarm() {
     swarming = false;
     swarmParams = null;
-    swarmSettleFrom = null;
     diagram.classList.remove("is-swarming");
     for (const item of state) {
       item.x = 0;
@@ -480,16 +438,10 @@
 
       let sampleFn;
       if (progress >= SWARM_SETTLE_START) {
-        // Capture the live rendered pose (not a re-sample) so settle starts seamlessly.
-        if (!swarmSettleFrom) {
-          swarmSettleFrom = state.map((item) => ({
-            x: item.x,
-            y: item.y,
-            rz: item.swarmRz
-          }));
-        }
+        // Same oscillators as free flight; only the envelope fades (no mode switch).
         const settleT = (progress - SWARM_SETTLE_START) / (1 - SWARM_SETTLE_START);
-        sampleFn = (index) => sampleSwarmSettle(index, elapsedMs, settleT);
+        const agitation = swarmSettleAgitation(settleT);
+        sampleFn = (index) => sampleSwarmFlight(index, elapsedMs, agitation);
       } else {
         const envelope = swarmEnvelope(progress);
         sampleFn = (index) => sampleSwarmFlight(index, elapsedMs, envelope);
@@ -751,7 +703,6 @@
       if (swarming) {
         swarming = false;
         swarmParams = null;
-        swarmSettleFrom = null;
         diagram.classList.remove("is-swarming");
       }
       resetTargets();
